@@ -1,0 +1,22 @@
+{
+  "name": "model-router",
+  "displayName": "Model Router",
+  "version": "1.3.0",
+  "description": "Run Claude Code sessions on any model your subscriptions cover via CLIProxyAPI. Ships /fabsol (Claude + GPT Sol), /fabkim (Claude + Kimi worker), /claude (Claude-only), and /moonshot (Kimi-only session).",
+  "author": {
+    "name": "RoboNuggets"
+  },
+  "repository": "https://github.com/robonuggets/model-router",
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "models",
+    "routing",
+    "proxy",
+    "orchestrator",
+    "fabsol",
+    "fabkim",
+    "claude",
+    "moonshot",
+    "kimi"
+  ]
+}

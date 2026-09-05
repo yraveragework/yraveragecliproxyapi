@@ -1,0 +1,44 @@
+# secrets & local runtime
+config.yaml
+webui/panel-password.txt
+auth/
+logs/
+_updates/
+*.log
+startup.log
+startup.err.log
+**/state.json
+**/worker.log
+**/node_modules/
+panel-src/dist/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# large binary — download from upstream releases (kept locally, not committed)
+cli-proxy-api.exe
+
+# recovery scratch (should not exist in dest)
+_recovered/
+_panel-upstream/
+_extract*/
+
+# Private credentials, local agent state, and publication scratch
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.zip
+/.claude/
+/.codex/
+/.cursor/
+/.freebuff/
+/.ngodingpakeai/
+/.publish-snapshot/
+/AGENTS.md
+/.ngodingpakeaiignore
+/docs/internal/

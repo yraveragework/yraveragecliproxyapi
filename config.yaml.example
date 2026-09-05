@@ -1,0 +1,14 @@
+host: "127.0.0.1"
+port: 8317
+# Portable auth next to install (recommended for sharing)
+auth-dir: "./auth"
+api-keys:
+  - "change-me-api-key"
+debug: false
+nonstream-keepalive-interval: 15
+remote-management:
+  allow-remote: false
+  # Plaintext on first run — binary will bcrypt-hash it into config.yaml
+  secret-key: "change-me-management-password"
+  disable-control-panel: false
+  disable-auto-update-panel: true

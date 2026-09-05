@@ -1,0 +1,16 @@
+{
+  "windowsLoginEnabled": false,
+  "openPanelOnStart": true,
+  "startMinimized": true,
+  "authMode": "portable",
+  "authCustomPath": "",
+  "autoRefreshSeconds": 30,
+  "notificationsEnabled": true,
+  "notificationDurationMs": 3000,
+  "companionPorts": {
+    "claudeAutostart": 19888,
+    "fabSol": 19889,
+    "fabKim": 19892,
+    "localSettings": 19890
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "robonuggets",
+  "owner": {
+    "name": "RoboNuggets"
+  },
+  "description": "Local CLIProxyAPI model-router plugins: FabSol, FabKim, Claude-only, and Moonshot session flows.",
+  "plugins": [
+    {
+      "name": "model-router",
+      "source": "./",
+      "description": "Claude Code + CLIProxyAPI: /fabsol (Claude orch + Sol), /fabkim (Claude orch + Kimi worker), /claude (Claude-only), /moonshot (Kimi-only)."
+    }
+  ]
+}

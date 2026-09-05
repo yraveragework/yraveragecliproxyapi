@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLI Proxy API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #14201c;
+      --muted: #4a5c54;
+      --paper: #f3f6f2;
+      --panel: rgba(255, 255, 255, 0.72);
+      --line: rgba(20, 32, 28, 0.12);
+      --go: #1f7a4c;
+      --go-hover: #17633d;
+      --stop: #b23a2f;
+      --stop-hover: #932f26;
+      --accent: #0e6b6b;
+      --glow: rgba(14, 107, 107, 0.18);
+      --ok: #1f7a4c;
+      --off: #8a6a2f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 10% -10%, #c9ebe0 0%, transparent 55%),
+        radial-gradient(900px 600px at 100% 0%, #dce8f2 0%, transparent 50%),
+        linear-gradient(160deg, #eef4ef 0%, #f7f4ec 48%, #e8eef2 100%);
+    }
+
+    .wrap {
+      width: min(920px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 3.5rem 0 4rem;
+    }
+
+    .brand {
+      font-family: "Instrument Serif", serif;
+      font-size: clamp(2.6rem, 6vw, 4rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.75rem;
+      animation: rise 0.7s ease both;
+    }
+
+    .lede {
+      max-width: 34rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.5;
+      margin: 0 0 2rem;
+      animation: rise 0.7s ease 0.08s both;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      align-items: center;
+      margin-bottom: 1.75rem;
+      animation: rise 0.7s ease 0.14s both;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      background: var(--off);
+      box-shadow: 0 0 0 4px rgba(138, 106, 47, 0.15);
+    }
+
+    .dot.on {
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(31, 122, 76, 0.16);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 2.25rem;
+      animation: rise 0.7s ease 0.2s both;
+    }
+
+    button, .linkbtn {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      border-radius: 0.7rem;
+      padding: 0.85rem 1.25rem;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:active, .linkbtn:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.55; cursor: wait; }
+
+    .btn-start {
+      background: var(--go);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(31, 122, 76, 0.25);
+    }
+    .btn-start:hover { background: var(--go-hover); }
+
+    .btn-stop {
+      background: var(--stop);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(178, 58, 47, 0.22);
+    }
+    .btn-stop:hover { background: var(--stop-hover); }
+
+    .btn-panel {
+      background: var(--ink);
+      color: #f4f7f5;
+      box-shadow: 0 10px 28px rgba(20, 32, 28, 0.18);
+    }
+    .btn-panel:hover { background: #0d1613; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.55); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      animation: rise 0.7s ease 0.28s both;
+    }
+
+    .block {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      padding: 1.15rem 1.2rem 1.25rem;
+      box-shadow: 0 12px 40px var(--glow);
+    }
+
+    .block h2 {
+      margin: 0 0 0.65rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .value {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.98rem;
+      word-break: break-all;
+      line-height: 1.45;
+    }
+
+    .hint {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .msg {
+      min-height: 1.4rem;
+      margin: 0 0 1.25rem;
+      color: var(--accent);
+      font-weight: 600;
+      animation: rise 0.7s ease 0.18s both;
+    }
+
+    .foot {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      animation: rise 0.7s ease 0.34s both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1 class="brand">CLI Proxy API</h1>
+    <p class="lede">Start or stop the local proxy, then open the built-in management panel to connect accounts and manage keys.</p>
+
+    <div class="status-row">
+      <div class="pill">
+        <span id="dot" class="dot"></span>
+        <span id="statusText">Checking…</span>
+      </div>
+      <span id="portLabel" class="pill">Port 8317</span>
+    </div>
+
+    <p class="msg" id="msg"></p>
+
+    <div class="actions">
+      <button class="btn-start" id="btnStart" type="button">Start proxy</button>
+      <button class="btn-stop" id="btnStop" type="button">Stop proxy</button>
+      <a class="linkbtn btn-panel" id="btnPanel" href="http://127.0.0.1:8317/management.html" target="_blank" rel="noopener">Open management panel</a>
+      <button class="btn-ghost" id="btnRefresh" type="button">Refresh status</button>
+    </div>
+
+    <section class="grid">
+      <article class="block">
+        <h2>API base URL</h2>
+        <div class="value" id="apiUrl">http://127.0.0.1:8317</div>
+        <p class="hint">API root only. Web UI is /management.html</p>
+      </article>
+      <article class="block">
+        <h2>Client API key</h2>
+        <div class="value" id="apiKey">CHANGE_ME_LOCAL_SECRET</div>
+        <p class="hint">Use as Bearer token in your client.</p>
+      </article>
+      <article class="block">
+        <h2>Panel password</h2>
+        <div class="value" id="adminKey">CHANGE_ME_LOCAL_SECRET</div>
+        <p class="hint">Login key for the management web UI.</p>
+      </article>
+    </section>
+
+    <p class="foot">
+      You can also use <code>start.bat</code> / <code>stop.bat</code> in this folder.
+      After first start, log into a provider (Codex, Claude, Gemini, etc.) from the management panel.
+    </p>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const msg = (text) => { $("msg").textContent = text || ""; };
+
+    async function api(path, method = "GET") {
+      const res = await fetch(path, { method });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ("Request failed: " + res.status));
+      return data;
+    }
+
+    function renderStatus(data) {
+      const running = !!data.running;
+      $("dot").classList.toggle("on", running);
+      $("statusText").textContent = running ? "Running" : "Stopped";
+      $("btnStart").disabled = running;
+      $("btnStop").disabled = !running;
+      if (data.port) {
+        $("portLabel").textContent = "Port " + data.port;
+        $("apiUrl").textContent = "http://127.0.0.1:" + data.port;
+        $("btnPanel").href = "http://127.0.0.1:" + data.port + "/management.html";
+      }
+      if (data.apiKey) $("apiKey").textContent = data.apiKey;
+      if (data.adminKey) $("adminKey").textContent = data.adminKey;
+    }
+
+    async function refresh() {
+      try {
+        const data = await api("/api/status");
+        renderStatus(data);
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+
+    async function withBusy(btn, fn) {
+      const buttons = [$("btnStart"), $("btnStop"), $("btnRefresh")];
+      buttons.forEach((b) => b.disabled = true);
+      try {
+        await fn();
+      } finally {
+        await refresh();
+      }
+    }
+
+    $("btnRefresh").onclick = () => withBusy($("btnRefresh"), refresh);
+
+    $("btnStart").onclick = () => withBusy($("btnStart"), async () => {
+      msg("Starting…");
+      const data = await api("/api/start", "POST");
+      msg(data.message || "Started.");
+      if (data.running) {
+        setTimeout(() => window.open($("btnPanel").href, "_blank"), 800);
+      }
+    });
+
+    $("btnStop").onclick = () => withBusy($("btnStop"), async () => {
+      msg("Stopping…");
+      const data = await api("/api/stop", "POST");
+      msg(data.message || "Stopped.");
+    });
+
+    refresh();
+    setInterval(refresh, 4000);
+  </script>
+</body>
+</html>

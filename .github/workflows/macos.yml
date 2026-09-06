@@ -1,0 +1,21 @@
+name: macOS compatibility
+on:
+  push:
+  pull_request:
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Platform and service lifecycle tests
+        run: node --test tests/*.test.mjs
+      - name: Check Mac launchers
+        run: bash -n start.command stop.command
+      - name: Check companion syntax
+        run: |
+          for f in tools/*.mjs *worker/worker.mjs claude-autostart/worker.mjs local-settings/worker.mjs; do
+            node --check "$f"
+          done

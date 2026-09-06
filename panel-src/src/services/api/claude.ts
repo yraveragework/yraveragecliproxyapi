@@ -16,6 +16,7 @@ export interface ClaudeHeartbeat {
 }
 
 export interface ClaudeStatus {
+  platform?: string;
   ok: boolean;
   enabled: boolean;
   running: boolean;

@@ -1,3 +1,4 @@
+import { isWindows, cursorSettingsPath, proxyName } from '../tools/platform.mjs';
 /**
  * Local settings companion for CLI Proxy API.
  * Path healing, Windows login autostart, auth-dir modes, app QoL settings.
@@ -21,11 +22,11 @@ const APP_SETTINGS_PATH = path.join(ROOT, 'app-settings.json');
 const PROXY_CONFIG_PATH = path.join(ROOT, 'config.yaml');
 const LOG_PATH = path.join(__dirname, 'worker.log');
 const START_BAT = path.join(ROOT, 'start.bat');
-const FIXED_AUTH_DIR = 'C:\\cli-proxy-api';
+const FIXED_AUTH_DIR = isWindows ? 'C:\\cli-proxy-api' : path.join(HOME, '.cli-proxy-api');
 const STARTUP_LINK_NAME = 'CLIProxyAPI.lnk';
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/router-for-me/CLIProxyAPI/releases';
 const UPDATE_ROOT = path.join(ROOT, '_updates');
-const PROXY_EXE_NAME = 'cli-proxy-api.exe';
+const PROXY_EXE_NAME = proxyName();
 const PROXY_EXE_PATH = path.join(ROOT, PROXY_EXE_NAME);
 const MIN_UPDATE_EXE_BYTES = 1024 * 1024;
 const GITHUB_HEADERS = {
@@ -39,7 +40,7 @@ const DEFAULT_SETTINGS = {
   windowsLoginEnabled: false,
   openPanelOnStart: true,
   startMinimized: true,
-  authMode: 'fixed',
+  authMode: isWindows ? 'fixed' : 'portable',
   authCustomPath: '',
   autoRefreshSeconds: 30,
   notificationsEnabled: true,
@@ -217,10 +218,15 @@ function startupShortcutPath() {
 }
 
 function isWindowsLoginEnabled() {
+  if (!isWindows) return false;
   return fs.existsSync(startupShortcutPath());
 }
 
 async function setWindowsLogin(enabled) {
+  if (!isWindows) {
+    if (enabled) throw new Error('Windows login startup is unavailable on macOS. Use start.command to launch the app.');
+    return { ok: true, enabled: false };
+  }
   const linkPath = startupShortcutPath();
   if (!enabled) {
     if (fs.existsSync(linkPath)) fs.unlinkSync(linkPath);
@@ -256,6 +262,10 @@ async function setWindowsLogin(enabled) {
 }
 
 async function healCliproxyDir() {
+  if (!isWindows) {
+    process.env.CLIPROXY_DIR = ROOT;
+    return { ok: true, installRoot: ROOT, notes: ['macOS uses per-session environment; Windows startup shortcuts are not modified.'] };
+  }
   const notes = [];
   const name = 'CLIPROXY_DIR';
   const value = ROOT;
@@ -437,6 +447,7 @@ function safeUpdateFolderName(tagName) {
 }
 
 function selectReleaseAsset(release) {
+  if (!isWindows) throw new Error('On macOS, replace cli-proxy-api from the matching upstream darwin release after stopping the app. The Windows updater is unavailable.');
   const assets = Array.isArray(release?.assets) ? release.assets : [];
   const platforms = process.arch === 'arm64'
     ? ['windows_aarch64', 'windows_amd64']
@@ -745,8 +756,10 @@ function getStatusPayload() {
     authPath,
     authPathFromConfig: yamlAuth,
     authPathExists: fs.existsSync(authPath),
+    platform: process.platform,
+    capabilities: { loginStartup: isWindows, binaryUpdate: isWindows },
     windowsLoginEnabled: isWindowsLoginEnabled(),
-    windowsLoginShortcut: startupShortcutPath(),
+    windowsLoginShortcut: isWindows ? startupShortcutPath() : null,
     settings,
     fixedAuthDir: FIXED_AUTH_DIR,
     portableAuthDir: portableAuthDir(),
@@ -778,6 +791,10 @@ async function readBody(req) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${config.listenHost}:${config.listenPort}`);
   const { pathname } = url;
+  if (!isWindows && pathname.startsWith('/update/')) {
+    sendJson(res, 400, { ok: false, error: 'Automatic binary updates are Windows-only. On macOS, stop the app and replace cli-proxy-api using the matching darwin release.' });
+    return;
+  }
 
   if (req.method === 'OPTIONS') {
     sendJson(res, 204, {});

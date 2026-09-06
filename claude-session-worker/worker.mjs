@@ -1,3 +1,4 @@
+import { isWindows, proxyName, cursorSettingsPath, findClaude, launchMacSession, stopAgentProcess } from '../tools/platform.mjs';
 /**
  * Claude-only companion worker for CLI Proxy API management panel.
  * Starts / stops a native Claude Code session (direct login, never the proxy).
@@ -19,12 +20,7 @@ const SESSION_BAT = path.join(__dirname, 'session.bat');
 const MODEL_ROUTER_SRC = path.join(ROOT, 'model-router');
 const CLAUDE_HOME = path.join(HOME, '.claude');
 const CURSOR_SKILLS = path.join(HOME, '.cursor', 'skills');
-const CURSOR_SETTINGS = path.join(
-  process.env.APPDATA || path.join(HOME, 'AppData', 'Roaming'),
-  'Cursor',
-  'User',
-  'settings.json'
-);
+const CURSOR_SETTINGS = cursorSettingsPath(HOME);
 const MOONSHOT_DIR = path.join(ROOT, 'moonshot-worker');
 const CURSOR_ROUTING_PY = path.join(MOONSHOT_DIR, 'cursor-routing.py');
 const CURSOR_ROUTING_BACKUP = path.join(MOONSHOT_DIR, 'cursor-routing-backup.json');
@@ -210,18 +206,7 @@ async function stopSiblingSessions() {
   );
 }
 
-async function findClaudeOnPath() {
-  try {
-    const { stdout } = await execFileAsync('where.exe', ['claude']);
-    const line = stdout
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .find(Boolean);
-    return line || null;
-  } catch {
-    return null;
-  }
-}
+async function findClaudeOnPath() { return findClaude(); }
 
 function findClaudeCredentials() {
   const candidates = [
@@ -304,6 +289,7 @@ function restartHeartbeatTimers() {
 }
 
 function writeSessionBat() {
+  if (!isWindows) return;
   const bat = `@echo off
 REM Session launcher used by the Claude-only management worker.
 REM Uses the native Claude login — do NOT route this session through the proxy.
@@ -443,6 +429,7 @@ function ensureClaudeSettings() {
 }
 
 async function clearUserProxyEnv() {
+  if (!isWindows) return { ok: true, notes: ['Direct Claude session clears inherited routing locally.'] };
   const notes = [];
   const names = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'];
   const tmpPs1 = path.join(__dirname, 'clear-user-env.ps1');
@@ -484,7 +471,7 @@ function ensureCursorTerminalEnv() {
     if (fs.existsSync(CURSOR_SETTINGS)) {
       current = JSON.parse(fs.readFileSync(CURSOR_SETTINGS, 'utf8'));
     }
-    const key = 'terminal.integrated.env.windows';
+    const key = isWindows ? 'terminal.integrated.env.windows' : 'terminal.integrated.env.osx';
     const env = { ...(current[key] || {}) };
     delete env.ANTHROPIC_BASE_URL;
     delete env.ANTHROPIC_AUTH_TOKEN;
@@ -510,7 +497,7 @@ async function restoreCursorRouting() {
     return lastCursorRouting;
   }
   try {
-    const { stdout, stderr } = await execFileAsync('python', [
+    const { stdout, stderr } = await execFileAsync(isWindows ? 'python' : 'python3', [
       CURSOR_ROUTING_PY,
       'restore',
       '--backup',
@@ -575,6 +562,10 @@ async function startSession() {
   if (!claudePath) {
     throw new Error('claude not found in PATH (npm install -g @anthropic-ai/claude-code)');
   }
+  let pid;
+  if (!isWindows) {
+    pid = await launchMacSession(__dirname);
+  } else {
   if (!fs.existsSync(SESSION_BAT)) {
     throw new Error('session.bat missing next to Claude session worker');
   }
@@ -594,9 +585,11 @@ async function startSession() {
     '-Command',
     psScript,
   ]);
-  const pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
+  pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
   if (!Number.isFinite(pid) || pid <= 0) {
     throw new Error('Failed to start Claude session window');
+  }
+
   }
 
   state.enabled = true;
@@ -613,7 +606,7 @@ async function stopSession() {
   const pid = state.pid;
   if (pid && isPidAlive(pid)) {
     try {
-      await execFileAsync('taskkill.exe', ['/PID', String(pid), '/T', '/F']);
+      await stopAgentProcess(pid);
       log(`Claude session stopped pid=${pid}`);
     } catch (err) {
       log(`taskkill pid=${pid}: ${err.message}`);
@@ -685,6 +678,7 @@ async function getStatusPayload() {
     lastActionAt: state.lastActionAt,
     claudeAvailable: Boolean(claudePath),
     claudePath,
+    platform: process.platform,
     hasLogin: Boolean(credentialsPath),
     loginPath: credentialsPath,
     hasSessionModel: isClaudeModelId(config.sessionModel),

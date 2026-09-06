@@ -87,7 +87,7 @@ curl.exe -s "$env:MODEL_ROUTER_URL/v1/models" -H "Authorization: Bearer $env:MOD
 Git Bash / macOS / Linux:
 
 ```bash
-curl.exe -s "${MODEL_ROUTER_URL:-http://127.0.0.1:8317}/v1/models" \
+curl -s "${MODEL_ROUTER_URL:-http://127.0.0.1:8317}/v1/models" \
   -H "Authorization: Bearer ${MODEL_ROUTER_KEY:-CHANGE_ME_LOCAL_SECRET}"
 ```
 

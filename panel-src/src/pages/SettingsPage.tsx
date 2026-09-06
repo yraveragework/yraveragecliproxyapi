@@ -121,6 +121,9 @@ export function SettingsPage() {
       </Card>
 
       <Card title={t('app_settings.section_startup')}>
+        {status?.platform === 'darwin' ? (
+          <p className={styles.lead}>macOS: use start.command to launch the app. Helpers run in the background; agent terminals open when you enable a feature. Windows login startup and automatic binary updates are unavailable on this platform.</p>
+        ) : null}
         <div className={styles.controlRow}>
           <div>
             <div className={styles.controlLabel}>{t('app_settings.windows_login')}</div>
@@ -131,7 +134,7 @@ export function SettingsPage() {
             onChange={(value) =>
               void run(() => setWindowsLogin(value), 'app_settings.saved')
             }
-            disabled={!available || saving || loading}
+            disabled={!available || saving || loading || status?.capabilities?.loginStartup === false}
             label={status?.windowsLoginEnabled ? t('common.on') : t('common.off')}
             ariaLabel={t('app_settings.windows_login')}
           />

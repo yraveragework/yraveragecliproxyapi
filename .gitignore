@@ -1,4 +1,4 @@
-# secrets & local runtime
+ï»¿# secrets & local runtime
 config.yaml
 webui/panel-password.txt
 auth/
@@ -16,7 +16,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# large binary — download from upstream releases (kept locally, not committed)
+# large binary â€” download from upstream releases (kept locally, not committed)
 cli-proxy-api.exe
 
 # recovery scratch (should not exist in dest)
@@ -24,7 +24,16 @@ _recovered/
 _panel-upstream/
 _extract*/
 
-# Private credentials, local agent state, and publication scratch
+# Native macOS binaries and private runtime artifacts
+/cli-proxy-api
+**/.runtime/
+*.err.log
+*.command.generated
+/.publish-snapshot/
+/.publish-*.json
+/.publish-*.py
+
+# Local agent state and credentials
 .env
 .env.*
 !.env.example
@@ -38,7 +47,6 @@ _extract*/
 /.cursor/
 /.freebuff/
 /.ngodingpakeai/
-/.publish-snapshot/
 /AGENTS.md
 /.ngodingpakeaiignore
 /docs/internal/

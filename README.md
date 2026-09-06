@@ -1,6 +1,6 @@
 # CLIProxyAPI Custom Overlay (FabSol + Settings + Autostart)
 
-Windows-focused overlay on **CLIProxyAPI 7.2.x** that adds a customized management panel and local helper workers:
+Windows and macOS overlay on **CLIProxyAPI 7.2.x** that adds a customized management panel and local helper workers:
 
 - **FabSol** tab (Operate) — Claude orchestrator + GPT Sol worker (self-contained toggle)
 - **FabKim** tab (Operate) — Claude orchestrator + Kimi worker (same FabSol flow; default worker `kimi-k3`)
@@ -21,7 +21,11 @@ This repository ships the overlay source, static panel build (`static/management
 
 Custom FabSol / Settings / Autostart additions in this tree are a community overlay; see `NOTICE.md` and `LICENSE`.
 
-## Requirements
+## macOS
+
+For a Mac-native installation, see [macOS setup](docs/MACOS.md). Use `start.command` / `stop.command`; the browser panel runs locally on the Mac and agent terminals open on demand. macOS Terminal acceptance testing is still required.
+
+## Windows requirements
 
 - Windows (amd64)
 - [Node.js](https://nodejs.org/) (for FabSol, Settings, and Claude autostart workers)
@@ -75,7 +79,3 @@ Then copy `panel-src/dist/index.html` to `static/management.html` (keep `static/
 ## License
 
 See `LICENSE` (upstream) and `NOTICE.md` for overlay notes.
-
-## Published configuration
-
-This snapshot contains placeholders in place of local credentials. Before starting, replace `CHANGE_ME_LOCAL_SECRET` in companion `config.json` files with your own proxy API key or management key as appropriate. Configure `config.yaml` and the optional panel password from the examples. Keep credentials local and do not commit configured secrets. Local agent state, authentication data, logs, archives, and prior Git history are excluded.

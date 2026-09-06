@@ -17,7 +17,7 @@ STORAGE_KEY = (
 
 
 def db_path() -> Path:
-    appdata = os.environ.get("APPDATA") or ""
+    appdata = str(Path.home() / "Library" / "Application Support") if sys.platform == "darwin" else os.environ.get("APPDATA") or ""
     return Path(appdata) / "Cursor" / "User" / "globalStorage" / "state.vscdb"
 
 

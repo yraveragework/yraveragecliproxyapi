@@ -1,3 +1,4 @@
+import { isWindows, proxyName, cursorSettingsPath, findClaude, launchMacSession, stopAgentProcess } from '../tools/platform.mjs';
 /**
  * Moonshot companion worker for CLI Proxy API management panel.
  * Starts / stops a Claude Code session on a selectable Kimi model and reports status.
@@ -16,19 +17,14 @@ const CONFIG_PATH = path.join(__dirname, 'config.json');
 const STATE_PATH = path.join(__dirname, 'state.json');
 const LOG_PATH = path.join(__dirname, 'worker.log');
 const SESSION_BAT = path.join(__dirname, 'session.bat');
-const PROXY_EXE = path.join(ROOT, 'cli-proxy-api.exe');
+const PROXY_EXE = path.join(ROOT, proxyName());
 const PROXY_CONFIG = path.join(ROOT, 'config.yaml');
 const MODEL_ROUTER_SRC = path.join(ROOT, 'model-router');
 const CLAUDE_HOME = path.join(HOME, '.claude');
 const CURSOR_SKILLS = path.join(HOME, '.cursor', 'skills');
 const CURSOR_ROUTING_PY = path.join(__dirname, 'cursor-routing.py');
 const CURSOR_ROUTING_BACKUP = path.join(__dirname, 'cursor-routing-backup.json');
-const CURSOR_SETTINGS = path.join(
-  process.env.APPDATA || path.join(HOME, 'AppData', 'Roaming'),
-  'Cursor',
-  'User',
-  'settings.json'
-);
+const CURSOR_SETTINGS = cursorSettingsPath(HOME);
 
 /** Other Operate session companions — only one mode should own MODEL_ROUTER_* / Cursor at a time. */
 const SIBLING_SESSION_PORTS = [19889, 19891, 19892, 19893];
@@ -357,6 +353,7 @@ function restartHeartbeatTimers() {
 }
 
 function writeSessionBat() {
+  if (!isWindows) return;
   const bat = `@echo off
 REM Session launcher used by the Moonshot management worker.
 REM Assumes CLIProxyAPI is already running on :8317.
@@ -398,18 +395,7 @@ endlocal
   fs.writeFileSync(SESSION_BAT, bat.replace(/\n/g, '\r\n'), 'utf8');
 }
 
-async function findClaudeOnPath() {
-  try {
-    const { stdout } = await execFileAsync('where.exe', ['claude']);
-    const line = stdout
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .find(Boolean);
-    return line || null;
-  } catch {
-    return null;
-  }
-}
+async function findClaudeOnPath() { return findClaude(); }
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -532,6 +518,7 @@ function ensureClaudeSettings() {
 }
 
 async function ensureUserEnvVars() {
+  if (!isWindows) return { ok: true, notes: ['Routing environment is applied only to the requested macOS session.'] };
   const env = routerEnv();
   const notes = [];
   const tmpPs1 = path.join(__dirname, 'set-user-env.ps1');
@@ -576,7 +563,7 @@ function ensureCursorTerminalEnv() {
       current = JSON.parse(fs.readFileSync(CURSOR_SETTINGS, 'utf8'));
     }
     const env = routerEnv();
-    const key = 'terminal.integrated.env.windows';
+    const key = isWindows ? 'terminal.integrated.env.windows' : 'terminal.integrated.env.osx';
     current[key] = { ...(current[key] || {}), ...env };
     fs.writeFileSync(CURSOR_SETTINGS, `${JSON.stringify(current, null, 2)}\n`, 'utf8');
     notes.push(`Cursor terminal env updated (${CURSOR_SETTINGS})`);
@@ -597,7 +584,7 @@ async function runCursorRouting(action, extraModels = []) {
     new Set([config.sessionModel, ...extraModels].filter(Boolean))
   ).join(',');
   try {
-    const { stdout, stderr } = await execFileAsync('python', [
+    const { stdout, stderr } = await execFileAsync(isWindows ? 'python' : 'python3', [
       CURSOR_ROUTING_PY,
       action,
       '--base-url',
@@ -706,6 +693,10 @@ async function startSession() {
     log('Moonshot enabled (Cursor routing only; claude missing)');
     return getStatusPayload();
   }
+  let pid;
+  if (!isWindows) {
+    pid = await launchMacSession(__dirname);
+  } else {
   if (!fs.existsSync(SESSION_BAT)) {
     throw new Error('session.bat missing next to Moonshot worker');
   }
@@ -725,9 +716,11 @@ async function startSession() {
     '-Command',
     psScript,
   ]);
-  const pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
+  pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
   if (!Number.isFinite(pid) || pid <= 0) {
     throw new Error('Failed to start Moonshot session window');
+  }
+
   }
 
   state.enabled = true;
@@ -744,7 +737,7 @@ async function stopSession() {
   const pid = state.pid;
   if (pid && isPidAlive(pid)) {
     try {
-      await execFileAsync('taskkill.exe', ['/PID', String(pid), '/T', '/F']);
+      await stopAgentProcess(pid);
       log(`Moonshot session stopped pid=${pid}`);
     } catch (err) {
       log(`taskkill pid=${pid}: ${err.message}`);

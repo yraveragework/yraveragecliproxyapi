@@ -33,7 +33,7 @@ const TOKEN_PING_OPTIONS = [
 ];
 
 function formatTime(value: number | null | undefined, locale: string) {
-  if (!value) return '—';
+  if (!value) return 'â€”';
   try {
     return new Date(value).toLocaleString(locale);
   } catch {
@@ -100,11 +100,11 @@ export function ClaudePage() {
           ? status.claudePath || t('common.yes')
           : t('claude.claude_missing'),
       },
-      {
+      ...(status.platform === 'darwin' ? [] : [{
         ok: status.hasLogin,
         label: t('claude.check_login'),
         detail: status.hasLogin ? status.loginPath || t('common.yes') : t('claude.login_missing'),
-      },
+      }]),
       {
         ok: status.hasSessionModel,
         label: t('claude.check_model'),
@@ -129,6 +129,8 @@ export function ClaudePage() {
         }
       >
         <p className={styles.lead}>{t('claude.description')}</p>
+        {status?.platform === 'darwin' ? <p className={styles.lead}>macOS login may be stored in Keychain. Confirm your login in Claude Code; this panel does not inspect Keychain credentials.</p> : null}
+        {status?.platform === 'darwin' ? <p className={styles.lead}>macOS login may be stored in Keychain. Confirm your login in Claude Code; this panel does not inspect Keychain credentials.</p> : null}
 
         <div className={styles.controlRow}>
           <div>
@@ -212,7 +214,7 @@ export function ClaudePage() {
               <span className={styles.metaValue}>
                 {status?.heartbeat?.tokenPingEnabled
                   ? status.heartbeat.lastTokenPingOk == null
-                    ? '—'
+                    ? 'â€”'
                     : status.heartbeat.lastTokenPingOk
                       ? t('claude.token_ping_ok', {
                           tokens: status.heartbeat.lastTokenPingTokens ?? '?',
@@ -227,7 +229,7 @@ export function ClaudePage() {
         <div className={styles.metaGrid}>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>{t('claude.pid')}</span>
-            <span className={styles.metaValue}>{status?.pid ?? '—'}</span>
+            <span className={styles.metaValue}>{status?.pid ?? 'â€”'}</span>
           </div>
           <div className={styles.metaItem}>
             <span className={styles.metaLabel}>{t('claude.started_at')}</span>

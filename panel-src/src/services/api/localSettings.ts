@@ -23,6 +23,8 @@ export interface AppSettings {
 
 export interface LocalSettingsStatus {
   ok: boolean;
+  platform?: string;
+  capabilities?: { loginStartup: boolean; binaryUpdate: boolean };
   installRoot: string;
   cliproxyDir: string;
   authMode: AuthMode;
@@ -30,7 +32,7 @@ export interface LocalSettingsStatus {
   authPathFromConfig?: string | null;
   authPathExists: boolean;
   windowsLoginEnabled: boolean;
-  windowsLoginShortcut?: string;
+  windowsLoginShortcut?: string | null;
   settings: AppSettings;
   fixedAuthDir: string;
   portableAuthDir: string;

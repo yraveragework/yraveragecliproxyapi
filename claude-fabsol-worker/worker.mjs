@@ -1,3 +1,4 @@
+import { isWindows, proxyName, cursorSettingsPath, findClaude, launchMacSession, stopAgentProcess } from '../tools/platform.mjs';
 /**
  * FabSol companion worker for CLI Proxy API management panel.
  * Starts / stops a Claude Code FabSol session and reports status.
@@ -16,16 +17,11 @@ const CONFIG_PATH = path.join(__dirname, 'config.json');
 const STATE_PATH = path.join(__dirname, 'state.json');
 const LOG_PATH = path.join(__dirname, 'worker.log');
 const SESSION_BAT = path.join(__dirname, 'session.bat');
-const PROXY_EXE = path.join(ROOT, 'cli-proxy-api.exe');
+const PROXY_EXE = path.join(ROOT, proxyName());
 const PROXY_CONFIG = path.join(ROOT, 'config.yaml');
 const MODEL_ROUTER_SRC = path.join(ROOT, 'model-router');
 const CLAUDE_HOME = path.join(HOME, '.claude');
-const CURSOR_SETTINGS = path.join(
-  process.env.APPDATA || path.join(HOME, 'AppData', 'Roaming'),
-  'Cursor',
-  'User',
-  'settings.json'
-);
+const CURSOR_SETTINGS = cursorSettingsPath(HOME);
 
 /** Other Operate session companions — only one mode should own MODEL_ROUTER_* / Cursor at a time. */
 const SIBLING_SESSION_PORTS = [19889, 19891, 19892, 19893];
@@ -356,6 +352,7 @@ function restartHeartbeatTimers() {
 
 /** Regenerate session.bat so the launcher matches the current config. */
 function writeSessionBat() {
+  if (!isWindows) return;
   const bat = `@echo off
 REM Session launcher used by the FabSol management worker.
 REM Assumes CLIProxyAPI is already running on :8317.
@@ -398,18 +395,7 @@ endlocal
   fs.writeFileSync(SESSION_BAT, bat.replace(/\n/g, '\r\n'), 'utf8');
 }
 
-async function findClaudeOnPath() {
-  try {
-    const { stdout } = await execFileAsync('where.exe', ['claude']);
-    const line = stdout
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .find(Boolean);
-    return line || null;
-  } catch {
-    return null;
-  }
-}
+async function findClaudeOnPath() { return findClaude(); }
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -478,7 +464,7 @@ function ensureClaudeManualInstall() {
 
     // Windows: PowerShell aliases curl → Invoke-WebRequest, which breaks -H/-s flags
     // and makes FabSol preflight look "empty". Force curl.exe in the skill text.
-    if (!text.includes('curl.exe')) {
+    if (isWindows && !text.includes('curl.exe')) {
       text = text.replace(
         /```bash\ncurl -s "\$\{MODEL_ROUTER_URL:-[^"]+\}\/v1\/models" \\\n\s*-H "Authorization: Bearer \$\{MODEL_ROUTER_KEY:-[^"]+\}"\n```/m,
         `\`\`\`powershell
@@ -561,6 +547,7 @@ function ensureClaudeSettings() {
 }
 
 async function ensureUserEnvVars() {
+  if (!isWindows) return { ok: true, notes: ['Routing environment is applied only to the requested macOS session.'] };
   const env = routerEnv();
   const notes = [];
   const tmpPs1 = path.join(__dirname, 'set-user-env.ps1');
@@ -607,7 +594,7 @@ function ensureCursorTerminalEnv() {
       current = JSON.parse(fs.readFileSync(CURSOR_SETTINGS, 'utf8'));
     }
     const env = routerEnv();
-    const key = 'terminal.integrated.env.windows';
+    const key = isWindows ? 'terminal.integrated.env.windows' : 'terminal.integrated.env.osx';
     current[key] = { ...(current[key] || {}), ...env };
     fs.writeFileSync(CURSOR_SETTINGS, `${JSON.stringify(current, null, 2)}\n`, 'utf8');
     notes.push(`Cursor terminal env updated (${CURSOR_SETTINGS})`);
@@ -655,6 +642,10 @@ async function startSession() {
   if (!claudePath) {
     throw new Error('claude not found in PATH (npm install -g @anthropic-ai/claude-code)');
   }
+  let pid;
+  if (!isWindows) {
+    pid = await launchMacSession(__dirname);
+  } else {
   if (!fs.existsSync(SESSION_BAT)) {
     throw new Error('session.bat missing next to FabSol worker');
   }
@@ -674,9 +665,11 @@ async function startSession() {
     '-Command',
     psScript,
   ]);
-  const pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
+  pid = Number(String(stdout).trim().split(/\r?\n/).filter(Boolean).pop());
   if (!Number.isFinite(pid) || pid <= 0) {
     throw new Error('Failed to start FabSol session window');
+  }
+
   }
 
   state.enabled = true;
@@ -693,7 +686,7 @@ async function stopSession() {
   const pid = state.pid;
   if (pid && isPidAlive(pid)) {
     try {
-      await execFileAsync('taskkill.exe', ['/PID', String(pid), '/T', '/F']);
+      await stopAgentProcess(pid);
       log(`FabSol session stopped pid=${pid}`);
     } catch (err) {
       // process may already be gone

@@ -152,6 +152,11 @@ export function DashboardPage() {
       onConfirm: async () => {
         setApplyingUpdate(true);
         try {
+          const localStatus = await localSettingsApi.getStatus();
+          if (localStatus.capabilities?.binaryUpdate === false) {
+            showNotification('On macOS, stop the app and replace cli-proxy-api using the matching upstream darwin release, then start again.', 'info', 10000);
+            return;
+          }
           const result = await localSettingsApi.applyUpdate({
             currentVersion: serverVersion,
             tagName: latestRelease.tag_name,

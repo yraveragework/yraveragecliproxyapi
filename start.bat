@@ -28,7 +28,7 @@ if %ERRORLEVEL%==0 (
   echo CLI Proxy API is already running.
 ) else (
   echo Starting CLI Proxy API on port 8317...
-  start "CLIProxyAPI" /MIN cmd /c "cli-proxy-api.exe --config config.yaml >> logs\proxy.log 2>&1"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath (Join-Path (Get-Location) 'cli-proxy-api.exe') -ArgumentList '--config config.yaml' -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -RedirectStandardOutput logs\proxy.log -RedirectStandardError logs\proxy.err.log"
   timeout /t 2 /nobreak >nul
 )
 

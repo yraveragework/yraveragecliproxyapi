@@ -15,6 +15,6 @@ if (Test-Path $settingsPath) {
   } catch {}
 }
 
-if ($open) {
+if ($open -and $env:CLIPROXY_NO_BROWSER -ne '1') {
   Start-Process 'http://127.0.0.1:8317/management.html'
 }

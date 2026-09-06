@@ -135,4 +135,4 @@ async function main() {
   try { openPanel = JSON.parse(fs.readFileSync(path.join(root, 'app-settings.json'), 'utf8')).openPanelOnStart !== false; } catch {}
   if (openPanel && process.env.CLIPROXY_NO_BROWSER !== '1') await exec('/usr/bin/open', [ready.panel]);
 }
-if (process.argv[1] && path.resolve(process.argv[1]) === filename) main().catch((error) => { console.error(error.message); process.exitCode = 1; });
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(filename)) main().catch((error) => { console.error(error.message); process.exitCode = 1; });
